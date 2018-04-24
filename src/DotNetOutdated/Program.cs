@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using CommandLine;
 
 namespace DotNetOutdated
 {
@@ -10,6 +11,12 @@ namespace DotNetOutdated
     {
         public static void Main(string[] args)
         {
+            Options options = new Options();
+
+             CommandLine.Parser.Default.ParseArguments<Options>(args)
+                .WithParsed(o => options = o)
+                .WithNotParsed(errors => Environment.Exit(1));
+
             string firstProjectFile = Directory.EnumerateFiles("./").FirstOrDefault(x => Path.GetExtension(x) == ".csproj");
 
             if (firstProjectFile == null)
@@ -19,7 +26,8 @@ namespace DotNetOutdated
             }
 
             var dependencies = ProjectParser.GetAllDependencies(firstProjectFile);
-            var client = new HttpNuGetClient();  
+            var client = new HttpNuGetClient(options.Source);
+
             var requests = dependencies.Select(x => client.GetPackageInfo(x.Name));
             var responses = Task.WhenAll(requests).Result.Where(response => response != null).ToArray();
             var data = new List<DependencyStatus>();
